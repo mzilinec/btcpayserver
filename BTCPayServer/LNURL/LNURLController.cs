@@ -11,8 +11,11 @@ using BTCPayServer.Services;
 using BTCPayServer.Services.Invoices;
 using LNURL;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NBitcoin;
+using NBitcoin.Crypto;
+using NBitcoin.Logging;
 using Newtonsoft.Json;
 using NSec.Cryptography;
 
@@ -24,37 +27,17 @@ namespace BTCPayServer
         private readonly InvoiceRepository _invoiceRepository;
         private readonly EventAggregator _eventAggregator;
         private readonly BTCPayNetworkProvider _btcPayNetworkProvider;
-        private readonly LightningClientFactoryService _lightningClientFactoryService;
-        private readonly IOptions<LightningNetworkOptions> _options;
+        private readonly LightningLikePaymentHandler _lightningLikePaymentHandler;
 
         public LNURLController(InvoiceRepository invoiceRepository,
             EventAggregator eventAggregator,
             BTCPayNetworkProvider btcPayNetworkProvider,
-            LightningClientFactoryService lightningClientFactoryService,
-            IOptions<LightningNetworkOptions> options)
+            LightningLikePaymentHandler lightningLikePaymentHandler)
         {
             _invoiceRepository = invoiceRepository;
             _eventAggregator = eventAggregator;
             _btcPayNetworkProvider = btcPayNetworkProvider;
-            _lightningClientFactoryService = lightningClientFactoryService;
-            _options = options;
-        }
-
-        private ILightningClient CreateLightningClient(LightningSupportedPaymentMethod supportedPaymentMethod,
-            BTCPayNetwork network)
-        {
-            var external = supportedPaymentMethod.GetExternalLightningUrl();
-            if (external != null)
-            {
-                return _lightningClientFactoryService.Create(external, network);
-            }
-            else
-            {
-                if (!_options.Value.InternalLightningByCryptoCode.TryGetValue(network.CryptoCode,
-                    out var connectionString))
-                    throw new PaymentMethodUnavailableException("No internal node configured");
-                return _lightningClientFactoryService.Create(connectionString, network);
-            }
+            _lightningLikePaymentHandler = lightningLikePaymentHandler;
         }
 
 
@@ -69,7 +52,6 @@ namespace BTCPayServer
             }
 
             var pmi = new PaymentMethodId(cryptoCode, PaymentTypes.LNURLPay);
-            var lnpmi = new PaymentMethodId(cryptoCode, PaymentTypes.LightningLike);
             var i = await _invoiceRepository.GetInvoice(invoiceId, true);
             if (i.Status == InvoiceStatusLegacy.New)
             {
@@ -91,23 +73,26 @@ namespace BTCPayServer
                     return NotFound();
                 }
 
-
                 var min = new LightMoney(isTopup ? 1 : accounting.Due);
                 var max = isTopup ? LightMoney.FromUnit(6.12m, LightMoneyUnit.BTC) : min;
                 var metadata =
-                    JsonConvert.SerializeObject(new[] { new KeyValuePair<string, string>("text/plain", invoiceId) });
-                ;
-
-
+                    JsonConvert.SerializeObject(new[] { new []{"text/plain", invoiceId} });
+                if (amount.HasValue && (amount < min || amount > max))
+                {
+                    return BadRequest(new LNURL.LNUrlStatusResponse()
+                    {
+                        Status = "ERROR", Reason = "Amount is out of bounds."
+                    });
+                }
                 if (amount.HasValue && string.IsNullOrEmpty(paymentMethodDetails.BOLT11) ||
                     paymentMethodDetails.GeneratedBoltAmount != amount)
                 {
-                    var client = CreateLightningClient(paymentMethodDetails.LightningSupportedPaymentMethod, network);
+                    var client = _lightningLikePaymentHandler.CreateLightningClient(paymentMethodDetails.LightningSupportedPaymentMethod, network);
                     if (!string.IsNullOrEmpty(paymentMethodDetails.BOLT11))
                     {
                         try
                         {
-                            //await client.CancelInvoice(paymentMethodDetails.InvoiceId);
+                            await client.CancelInvoice(paymentMethodDetails.InvoiceId);
                         }
                         catch (Exception)
                         {
@@ -115,17 +100,35 @@ namespace BTCPayServer
                         }
                     }
 
-                    var descriptionHash =
-                        new uint256(Sha256.Sha256.Hash(new ReadOnlySpan<byte>(Encoding.UTF8.GetBytes(metadata))));
-                    var invoice = await client.CreateInvoice(new CreateInvoiceParams(amount.Value,
-                        descriptionHash.ToString(),
-                        i.ExpirationTime.ToUniversalTime() - DateTimeOffset.UtcNow));
+                    var descriptionHash = new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(metadata)));
+                    LightningInvoice invoice;
+                    try
+                    {
+                        invoice = await client.CreateInvoice(new CreateInvoiceParams(amount.Value,
+                            descriptionHash,
+                            i.ExpirationTime.ToUniversalTime() - DateTimeOffset.UtcNow));
+                        if (!BOLT11PaymentRequest.Parse(invoice.BOLT11, network.NBitcoinNetwork)
+                            .VerifyDescriptionHash(metadata))
+                        {
+                            return BadRequest(new LNURL.LNUrlStatusResponse()
+                            {
+                                Status = "ERROR", Reason = "Lightning node could not generate invoice with a VALID description hash"
+                            });
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        return BadRequest(new LNURL.LNUrlStatusResponse()
+                        {
+                            Status = "ERROR", Reason = "Lightning node could not generate invoice with description hash"
+                        });
+                    }
+                    
                     paymentMethodDetails.BOLT11 = invoice.BOLT11;
                     paymentMethodDetails.InvoiceId = invoice.Id;
                     paymentMethodDetails.GeneratedBoltAmount = new LightMoney(amount.Value);
                     lightningPaymentMethod.SetPaymentMethodDetails(paymentMethodDetails);
                     await _invoiceRepository.UpdateInvoicePaymentMethod(invoiceId, lightningPaymentMethod);
-
                     _eventAggregator.Publish(new Events.InvoiceNewPaymentDetailsEvent(invoice.Id,
                         paymentMethodDetails, pmi));
                     return Ok(new LNURLPayRequest.LNURLPayRequestCallbackResponse()
@@ -150,7 +153,8 @@ namespace BTCPayServer
                         MinSendable = min,
                         MaxSendable = max,
                         CommentAllowed = 0,
-                        Metadata = metadata
+                        Metadata = metadata,
+                        Callback = new Uri(this.Request.GetCurrentUrl())
                     });
                 }
             }

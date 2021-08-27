@@ -168,7 +168,7 @@ namespace BTCPayServer.Payments.Lightning
             return null;
         }
 
-        private ILightningClient CreateLightningClient(LightningSupportedPaymentMethod supportedPaymentMethod, BTCPayNetwork network)
+        public ILightningClient CreateLightningClient(LightningSupportedPaymentMethod supportedPaymentMethod, BTCPayNetwork network)
         {
             var external = supportedPaymentMethod.GetExternalLightningUrl();
             if (external != null)
