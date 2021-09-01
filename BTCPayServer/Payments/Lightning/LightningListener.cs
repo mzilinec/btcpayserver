@@ -421,7 +421,7 @@ namespace BTCPayServer.Payments.Lightning
             var client = _lightningClientFactory.Create(ConnectionString, network);
             LightningInvoice lightningInvoice = await client.GetInvoice(listenedInvoice.PaymentMethodDetails.InvoiceId, cancellation);
             if (lightningInvoice?.Status is LightningInvoiceStatus.Paid &&
-                await AddPayment(lightningInvoice, listenedInvoice.InvoiceId))
+                await AddPayment(lightningInvoice, listenedInvoice.InvoiceId,listenedInvoice.PaymentMethod.GetId().PaymentType))
             {
                 Logs.PayServer.LogInformation($"{network.CryptoCode} (Lightning): Payment detected via polling on {listenedInvoice.InvoiceId}");
             }
@@ -467,7 +467,7 @@ namespace BTCPayServer.Payments.Lightning
                             if (notification.Status == LightningInvoiceStatus.Paid &&
                                 notification.PaidAt.HasValue && notification.Amount != null)
                             {
-                                if (await AddPayment(notification, listenedInvoice.InvoiceId))
+                                if (await AddPayment(notification, listenedInvoice.InvoiceId, listenedInvoice.PaymentMethod.GetId().PaymentType))
                                 {
                                     Logs.PayServer.LogInformation($"{network.CryptoCode} (Lightning): Payment detected via notification ({listenedInvoice.InvoiceId})");
                                 }
@@ -514,13 +514,14 @@ namespace BTCPayServer.Payments.Lightning
         bool _ErrorAlreadyLogged = false;
         readonly ConcurrentDictionary<string, ListenedInvoice> _ListenedInvoices = new ConcurrentDictionary<string, ListenedInvoice>();
 
-        public async Task<bool> AddPayment(LightningInvoice notification, string invoiceId)
+        public async Task<bool> AddPayment(LightningInvoice notification, string invoiceId, PaymentType paymentType)
         {
             var payment = await invoiceRepository.AddPayment(invoiceId, notification.PaidAt.Value, new LightningLikePaymentData()
             {
                 BOLT11 = notification.BOLT11,
                 PaymentHash = BOLT11PaymentRequest.Parse(notification.BOLT11, network.NBitcoinNetwork).PaymentHash,
-                Amount = notification.AmountReceived ?? notification.Amount, // if running old version amount received might be unavailable
+                Amount = notification.AmountReceived ?? notification.Amount, // if running old version amount received might be unavailable,
+                PaymentType = paymentType.ToString()
             }, network, accounted: true);
             if (payment != null)
             {
