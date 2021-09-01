@@ -73,7 +73,7 @@ namespace BTCPayServer
                     return NotFound();
                 }
 
-                var min = new LightMoney(isTopup ? 1 : accounting.Due);
+                var min = new LightMoney(isTopup ? 1m : accounting.Due.ToUnit(MoneyUnit.Satoshi), LightMoneyUnit.Satoshi);
                 var max = isTopup ? LightMoney.FromUnit(6.12m, LightMoneyUnit.BTC) : min;
                 var metadata =
                     JsonConvert.SerializeObject(new[] { new []{"text/plain", invoiceId} });
