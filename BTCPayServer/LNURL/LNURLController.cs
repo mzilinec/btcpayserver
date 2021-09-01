@@ -129,7 +129,7 @@ namespace BTCPayServer
                     paymentMethodDetails.GeneratedBoltAmount = new LightMoney(amount.Value);
                     lightningPaymentMethod.SetPaymentMethodDetails(paymentMethodDetails);
                     await _invoiceRepository.UpdateInvoicePaymentMethod(invoiceId, lightningPaymentMethod);
-                    _eventAggregator.Publish(new Events.InvoiceNewPaymentDetailsEvent(invoice.Id,
+                    _eventAggregator.Publish(new Events.InvoiceNewPaymentDetailsEvent(invoiceId,
                         paymentMethodDetails, pmi));
                     return Ok(new LNURLPayRequest.LNURLPayRequestCallbackResponse()
                     {
