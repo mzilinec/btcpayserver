@@ -93,6 +93,42 @@
         "BTCPAY_RECOMMENDED-PLUGINS": "BTCPayServer.Plugins.Test"
       },
       "applicationUrl": "https://localhost:14142/"
+    },
+    "Altcoins-BNB-Test": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "BTCPAY_NETWORK": "regtest",
+        "BTCPAY_LAUNCHSETTINGS": "true",
+        "BTCPAY_PORT": "14142",
+        "BTCPAY_BUNDLEJSCSS": "false",
+        "BTCPAY_LTCEXPLORERURL": "http://127.0.0.1:32838/",
+        "BTCPAY_LBTCEXPLORERURL": "http://127.0.0.1:32838/",
+        "BTCPAY_BTCLIGHTNING": "type=clightning;server=tcp://127.0.0.1:30993",
+        "BTCPAY_BTCEXTERNALLNDGRPC": "type=lnd-grpc;server=https://lnd:lnd@127.0.0.1:53280/;allowinsecure=true",
+        "BTCPAY_BTCEXTERNALLNDREST": "type=lnd-rest;server=https://lnd:lnd@127.0.0.1:53280/lnd-rest/btc/;allowinsecure=true",
+        "BTCPAY_BTCEXTERNALLNDSEEDBACKUP": "../BTCPayServer.Tests/TestData/LndSeedBackup/walletunlock.json",
+        "BTCPAY_BTCEXPLORERURL": "http://127.0.0.1:32838/",
+        "BTCPAY_ALLOW-ADMIN-REGISTRATION": "true",
+        "BTCPAY_DISABLE-REGISTRATION": "false",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BTCPAY_CHAINS": "eth,bnb,busd",
+        "BTCPAY_POSTGRES": "User ID=postgres;Host=127.0.0.1;Port=39372;Database=btcpayserver",
+        "BTCPAY_EXTERNALSERVICES": "totoservice:totolink;",
+        "BTCPAY_SSHCONNECTION": "root@127.0.0.1:21622",
+        "BTCPAY_SSHPASSWORD": "opD3i2282D",
+        "BTCPAY_DEBUGLOG": "debug.log",
+        "BTCPAY_TORRCFILE": "../BTCPayServer.Tests/TestData/Tor/torrc",
+        "BTCPAY_SOCKSENDPOINT": "localhost:9050",
+        "BTCPAY_DOCKERDEPLOYMENT": "true",
+        "BTCPAY_RECOMMENDED-PLUGINS": "BTCPayServer.Plugins.Test",
+
+        "ETH_CUSTOM_CHAINS": "BSC",
+        "ETH_CHAIN_BSC": "BNB\nBinance Token\nBNB_X = BNB_BTC * BTC_X,BNB_BTC = coingecko(BNB_BTC)\nhttps://bscscan.com/address/{0}\ndata:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=\n60\n56\n18",
+        "ETH_CUSTOM_TOKENS": "BUSD",
+        "ETH_TOKEN_BUSD": "BUSD\nBinance-Peg BUSD Token\nBUSD_X = coingecko(USD_X)\nhttps://bscscan.com/address/{0}\ndata:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=\n60\n56\n18\n0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"
+      },
+      "applicationUrl": "http://localhost:14142/"
     }
   }
 }

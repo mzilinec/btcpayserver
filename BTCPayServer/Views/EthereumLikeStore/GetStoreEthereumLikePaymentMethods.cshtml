@@ -13,54 +13,57 @@
 <div class="row">
     <div class="col-md-8">
         <div asp-validation-summary="All" class="text-danger"></div>
-        <div class="form-group">
-            <table class="table table-sm table-responsive-md">
-                <thead>
-                <tr>
-                    <th>Crypto</th>
-                    <th>Root address</th>
-                    <th class="text-center">Enabled</th>
-                    <th class="text-right">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var item in Model.Items)
-                {
+        @foreach (var chain in Model.Items)
+        {
+            <div class="form-group">
+                <h3>Chain @chain.Key</h3>
+                <table class="table table-sm table-responsive-md">
+                    <thead>
                     <tr>
-                        <td>@item.CryptoCode</td>
-                        <td>@item.RootAddress</td>
-                        <td class="text-center">
-                            @if (item.Enabled)
-                            {
-                                <span class="text-success fa fa-check"></span>
-                            }
-                            else
-                            {
-                                <span class="text-danger fa fa-times"></span>
-                            }
-                        </td>
-                        <td class="text-right">
-                            <a id="Modify@(item.CryptoCode)" asp-action="GetStoreEthereumLikePaymentMethod"
-                               asp-route-storeId="@Context.GetRouteValue("storeId")"
-                               asp-route-cryptoCode="@item.CryptoCode">
-                                Modify
-                            </a>
-                        </td>
+                        <th>Crypto</th>
+                        <th>Root address</th>
+                        <th class="text-center">Enabled</th>
+                        <th class="text-right">Actions</th>
                     </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in chain.Value)
+                    {
+                        <tr>
+                            <td>@item.CryptoCode</td>
+                            <td>@item.RootAddress</td>
+                            <td class="text-center">
+                                @if (item.Enabled)
+                                {
+                                    <span class="text-success fa fa-check"></span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger fa fa-times"></span>
+                                }
+                            </td>
+                            <td class="text-right">
+                                <a id="Modify@(item.CryptoCode)" asp-action="GetStoreEthereumLikePaymentMethod"
+                                asp-route-storeId="@Context.GetRouteValue("storeId")"
+                                asp-route-cryptoCode="@item.CryptoCode">
+                                    Modify
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+                @if (SignInManager.IsSignedIn(User) && User.IsInRole(Roles.ServerAdmin))
+                {
+                    <a asp-action="UpdateChainConfig" asp-controller="EthereumConfig" asp-route-chainId="@chain.Key">Configure Web3 for chain @chain.Key</a>
                 }
-                </tbody>
-            </table>
-        </div>
+            </div>
+            <hr>
+        }
     </div>
 </div>
-@if (SignInManager.IsSignedIn(User) && User.IsInRole(Roles.ServerAdmin))
-{
-    var chains = BTCPayNetworkProvider.GetAll().OfType<EthereumBTCPayNetwork>().Select(network => network.ChainId).Distinct();
-    foreach (var chain in chains)
-    {
-        <a asp-action="UpdateChainConfig" asp-controller="EthereumConfig" asp-route-chainId="@chain">Configure Web3 for chain @chain</a>
-    }
-}
+
+
 @section PageFootContent {
     @await Html.PartialAsync("_ValidationScriptsPartial")
 }

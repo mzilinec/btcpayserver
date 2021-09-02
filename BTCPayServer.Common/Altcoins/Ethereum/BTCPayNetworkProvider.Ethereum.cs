@@ -1,10 +1,49 @@
 ﻿#if ALTCOINS
 using NBitcoin;
+using System.Linq;
 
 namespace BTCPayServer
 {
     public partial class BTCPayNetworkProvider
     {
+
+        public void InitCustomETHChains() {
+            var chains = System.Environment.GetEnvironmentVariable("ETH_CUSTOM_CHAINS").Split(",").ToList();
+            foreach (var chain in chains) {
+                var chainConfig = System.Environment.GetEnvironmentVariable("ETH_CHAIN_" + chain).Split("\n").ToArray();
+                Add(new EthereumBTCPayNetwork() {
+                    CryptoCode = chainConfig[0],
+                    DisplayName = chainConfig[1],
+                    DefaultRateRules = chainConfig[2].Split(",").ToArray(),
+                    BlockExplorerLink = chainConfig[3],
+                    CryptoImagePath = chainConfig[4],
+                    ShowSyncSummary = false,
+                    CoinType = int.Parse(chainConfig[5]),
+                    ChainId = int.Parse(chainConfig[6]),
+                    Divisibility = int.Parse(chainConfig[7])
+                });
+            }
+        }
+
+        public void InitCustomERCTokens() {
+            var tokens = System.Environment.GetEnvironmentVariable("ETH_CUSTOM_TOKENS").Split(",").ToList();
+            foreach (var token in tokens) {
+                var tokenConfig = System.Environment.GetEnvironmentVariable("ETH_TOKEN_" + token).Split("\n").ToArray();
+                Add(new ERC20BTCPayNetwork() {
+                    CryptoCode = tokenConfig[0],
+                    DisplayName = tokenConfig[1],
+                    DefaultRateRules = tokenConfig[2].Split(",").ToArray(),
+                    BlockExplorerLink = tokenConfig[3],
+                    CryptoImagePath = tokenConfig[4],
+                    ShowSyncSummary = false,
+                    CoinType = int.Parse(tokenConfig[5]),
+                    ChainId = int.Parse(tokenConfig[6]),
+                    Divisibility = int.Parse(tokenConfig[7]),
+                    SmartContractAddress = tokenConfig[8]
+                });
+            }
+        }
+
         public void InitEthereum()
         {
             Add(new EthereumBTCPayNetwork()

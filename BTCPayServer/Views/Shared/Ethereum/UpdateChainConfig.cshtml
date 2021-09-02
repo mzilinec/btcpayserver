@@ -11,6 +11,8 @@
     ViewData.SetActivePageAndTitle(ServerNavPages.Policies, $"ETH Chain {Model.ChainId} Configuration");
 }
 
+<h1>ETH Chain @Model.ChainId Configuration</h1>
+
 @if (!ViewContext.ModelState.IsValid)
 {
     <div asp-validation-summary="All" class="text-danger"></div>

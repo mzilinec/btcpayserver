@@ -1,5 +1,6 @@
 #if ALTCOINS
 using System;
+using System.Numerics;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -48,16 +49,24 @@ namespace BTCPayServer.Services.Altcoins.Ethereum.UI
                 .OfType<EthereumSupportedPaymentMethod>();
 
             var excludeFilters = StoreData.GetStoreBlob().GetExcludedPaymentMethods();
+
+            var chains = _btcPayNetworkProvider.GetAll().OfType<EthereumBTCPayNetwork>().Select(network => network.ChainId).Distinct();
             var ethNetworks = _btcPayNetworkProvider.GetAll().OfType<EthereumBTCPayNetwork>();
 
             var vm = new ViewEthereumStoreOptionsViewModel() { };
+
+            // We want to show also chains for which no tokens are added yet
+            foreach(var chain in chains) {
+                vm.Items[chain] = new List<ViewEthereumStoreOptionItemViewModel>();
+            }
 
             foreach (var network in ethNetworks)
             {
                 var paymentMethodId = new PaymentMethodId(network.CryptoCode, EthereumPaymentType.Instance);
                 var matchedPaymentMethod = eth.SingleOrDefault(method =>
                     method.PaymentId == paymentMethodId);
-                vm.Items.Add(new ViewEthereumStoreOptionItemViewModel()
+
+                vm.Items[network.ChainId].Add(new ViewEthereumStoreOptionItemViewModel()
                 {
                     CryptoCode = network.CryptoCode,
                     Enabled = matchedPaymentMethod != null && !excludeFilters.Match(paymentMethodId),
@@ -154,9 +163,11 @@ namespace BTCPayServer.Services.Altcoins.Ethereum.UI
                 {
                     wallet.GetAccount(0);
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
-                    ModelState.AddModelError(nameof(viewModel.KeyPath), $"keypath was incorrect");
+                    Console.WriteLine(exception.ToString());
+                    // TODO: this call always fails with NBitcoin >= 6.0.0 due to a bug
+                    // ModelState.AddModelError(nameof(viewModel.KeyPath), $"keypath was incorrect");
                 }
             }
 
@@ -266,8 +277,8 @@ namespace BTCPayServer.Services.Altcoins.Ethereum.UI
 
     public class ViewEthereumStoreOptionsViewModel
     {
-        public List<ViewEthereumStoreOptionItemViewModel> Items { get; set; } =
-            new List<ViewEthereumStoreOptionItemViewModel>();
+        public Dictionary<int, List<ViewEthereumStoreOptionItemViewModel>> Items { get; set; } = 
+            new Dictionary<int, List<ViewEthereumStoreOptionItemViewModel>>();
     }
 
     public class ViewEthereumStoreOptionItemViewModel
